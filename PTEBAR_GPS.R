@@ -98,3 +98,24 @@ gps3_move <- df2move(gps3,
                      y = "Latitude",
                      time = "timest",
                      track_id = "Logger_ID")
+#### Bathymetry visualization ####
+# see https://pjbartlein.github.io/REarthSysSci/netCDF.html#introduction for use of .nc file
+
+library('ncdf4')
+ncfname <- 'C:/Users/Etudiant/Downloads/gebco_2020_tid_netcdf/GEBCO_2020_TID.nc'
+
+# open a netCDF file
+ncin <- ncdf4::nc_open(ncfname)
+print(ncin)
+
+# get longitude and latitude
+lon <- ncvar_get(ncin,"lon")
+nlon <- dim(lon)
+head(lon)
+
+lat <- ncvar_get(ncin,"lat")
+nlat <- dim(lat)
+head(lat)
+
+print(c(nlon,nlat))
+
