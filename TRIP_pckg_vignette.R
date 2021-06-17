@@ -48,18 +48,68 @@ gps <- gps[!is.na(gps$Latitude),]
 gps$timest <- paste(paste(gps$Year, gps$Month, gps$Day, sep = "-"), paste(gps$Hour, gps$Minute, gps$Second, sep = ":"), sep = " ")
 gps$timest <- as.POSIXct(gps$timest, tz = 'UTC')
 
-sp::coordinates(gps) <- c("Longitude", "Latitude")
 
-gps <- trip(gps, c("timest", "Logger_ID") )
-plot(gps, pch = ".")
-lines(gps)
+
+# Plot first option - old school
+gps1 <- gps
+sp::coordinates(gps1) <- c("Longitude", "Latitude")
+gps1 <- trip(gps, c("timest", "Logger_ID") )
+plot(gps1, pch = ".")
+lines(gps1)
 
 maps::map("world2", add = TRUE)
 axis(1)
 sp::degAxis(2)
 
-gps_sf <- sf::st_as_sf(gps)
-mapview::mapview(gps_sf) # Wonderful map to develop !!!!
+# Plot second option
+gps2 <- as(gps1, 'SpatialLinesDataFrame') # need to use the trip object for proceeding to the conversion
+gps_sf <- sf::st_as_sf(gps2)
+mapview::mapview(gps_sf, zcol = 'tripID') # Wonderful map to develop !!!!
+
+# Plot third option
+require(moveVis)
+# example
+data(whitestork_data) # named 'm' in th eenvironment
+stork <- cbind(m@trackId, m@data)
+class(stork)
+class(stork$time)
+crs_stork <- m@proj4string
+
+stork_move <- df2move(stork,
+                      proj = crs_stork,
+                      x = "x",
+                      y = "y",
+                      time = "time",
+                      track_id = "trackID") # conversion of the df in move object
+# align move_data to a uniform time scale
+mo <- align_move(stork_move, res = 4, unit = "mins")
+
+# create spatial frames with a OpenStreetMap watercolour map
+require(tidyverse)
+frames <- frames_spatial(mo,
+                         path_colours = rainbow(length(unique(stork$trackID))),
+                         map_service = "osm",
+                         map_type = "watercolor",
+                         alpha = 0.5) %>%
+  add_labels(x = "Longitude", y = "Latitude") %>% # add some customizations, such as axis labels
+  add_northarrow() %>%
+  add_scalebar() %>%
+  add_timestamps(m, type = "label") %>%
+  add_progress()
+
+frames[[100]] # preview one of the frames, e.g. the 100th frame
+
+# animate frames
+animate_frames(frames, out_file = "moveVis.gif")
+
+
+
+gps3 <- df2move(gps[gps$Logger_ID == 'PAC11',],
+                #proj = crs_hab,
+                x = "Longitude",
+                y = "Latitude",
+                time = "timest",
+                track_id = "Logger_ID")
 
 #### Gridding for time spent ####
 #There is a key functionality to determine the time spent in area on a grid, by leveraging the rasterize() generic function in the raster package. Any raster object may be used, so the specification of pixel area, extent and map projection is up to the user. (The trip line segments must all fall within the raster). 

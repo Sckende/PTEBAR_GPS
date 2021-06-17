@@ -79,7 +79,7 @@ length(frames) # number of frames
 frames[[100]] # display one of the frames
 frames[[130]]
 
-animate_frames(frames, out_file = "example_1.gif")
+animate_frames(frames, out_file = "example_2.gif")
 
 
 # Conversion of dataframe to move object
