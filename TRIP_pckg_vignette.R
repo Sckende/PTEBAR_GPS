@@ -82,20 +82,26 @@ stork_move <- df2move(stork,
                       time = "time",
                       track_id = "trackID") # conversion of the df in move object
 # align move_data to a uniform time scale
+stork_move2 <- df2move(stork[stork$trackID =='Sara',],
+                       proj = crs_stork,
+                       x = "x",
+                       y = "y",
+                       time = "time",
+                       track_id = "trackID")
 mo <- align_move(stork_move, res = 4, unit = "mins")
-
+mo2 <- align_move(stork_move2, res = 'max', unit = "mins")
 # create spatial frames with a OpenStreetMap watercolour map
 require(tidyverse)
-frames <- frames_spatial(mo,
-                         path_colours = rainbow(length(unique(stork$trackID))),
+frames <- frames_spatial(mo2,
+                         path_colours = rainbow(1),
                          map_service = "osm",
                          map_type = "watercolor",
                          alpha = 0.5) %>%
-  add_labels(x = "Longitude", y = "Latitude") %>% # add some customizations, such as axis labels
-  add_northarrow() %>%
-  add_scalebar() %>%
-  add_timestamps(m, type = "label") %>%
-  add_progress()
+  add_labels(x = "Longitude", y = "Latitude") #%>% # add some customizations, such as axis labels
+  # add_northarrow() %>%
+  # add_scalebar() %>%
+  # add_timestamps(m, type = "label") %>%
+  # add_progress()
 
 frames[[100]] # preview one of the frames, e.g. the 100th frame
 
@@ -103,13 +109,34 @@ frames[[100]] # preview one of the frames, e.g. the 100th frame
 animate_frames(frames, out_file = "moveVis.gif")
 
 
+#-------------------#
+# Logger_ID  "PAC11" "PAC15" "PAC16" "PAC03" "PAC10" "PAC06" "PAC12"
+mini_gps <- gps[gps$Logger_ID == 'PAC12', c(2, 9, 10, 29)]
+# Check for doublons in data
+tab <- table(mini_gps$timest)
 
-gps3 <- df2move(gps[gps$Logger_ID == 'PAC11',],
-                #proj = crs_hab,
+tab[tab >1]
+# Delete doublons
+mini_gps <- mini_gps %>% distinct(timest, .keep_all = TRUE)
+
+gps3 <- df2move(mini_gps,
+                proj = crs_stork,
                 x = "Longitude",
                 y = "Latitude",
                 time = "timest",
                 track_id = "Logger_ID")
+
+mo <- align_move(gps3, res = 400, unit = "mins")
+frames <- frames_spatial(mo,
+                         path_colours = rainbow(1),
+                         map_service = "osm",
+                         map_type = "watercolor",
+                         alpha = 0.5)
+frames[[100]]
+
+# animate frames
+animate_frames(frames, out_file = "PAC12_tracking.gif")
+
 
 #### Gridding for time spent ####
 #There is a key functionality to determine the time spent in area on a grid, by leveraging the rasterize() generic function in the raster package. Any raster object may be used, so the specification of pixel area, extent and map projection is up to the user. (The trip line segments must all fall within the raster). 
