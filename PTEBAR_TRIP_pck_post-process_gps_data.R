@@ -64,27 +64,39 @@ gps_list2 <- gps_list[no] # keeping list levels with data of interest
 require(mapview)
 
 # data conversion in SF LINESTRING
-track_lines <- data.frame()
-track_list <- list()
 
-par(mfrow = c(2,4))
+gps2 <- gps[!(gps$Logger_ID %in% c('PAC04', 'PAC13', 'PAC05')),]
+gps2 <- gps2[!is.na(gps2$Latitude),]
+
 projcrs <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+gps2 <- sf::st_as_sf(gps2,
+                     coords = c('Longitude', 'Latitude'),
+                     crs = projcrs)
+head(gps2)
 
-for(i in 1:length(gps_list2)){
-  tk <- gps_list2[[i]]
-  
-  tk <- tk[!is.na(tk$Latitude),]
-  tk <- tk[order(tk$time, decreasing = F),]
-  coord <- as.matrix(tk[, c('Longitude', 'Latitude')])
-  track <- sf::st_linestring(coord)
-  
-  track_lines <- rbind(track_lines, c(unique(tk$Logger_ID), sf::st_linestring(coord)))
-  track_list[[i]] <- track
-  names(track_list)[i] <- unique(tk$Logger_ID)
-  plot(track)
-}
+# Creation of SF LINESTRINGS
+require(tidyverse)
+require(sf)
+track_lines <- gps2 %>% group_by(Logger_ID) %>% summarize(do_union = FALSE) %>% st_cast("LINESTRING")
 
-mapview::mapview(track_list,
-                 color = rainbow(n = length(track_list)),
-                 legend = T)
+mapview(track_lines)
 
+# Loading of Reunion Island spatial polygons
+run <- st_read("C:/Users/Etudiant/Desktop/SMAC/SPATIAL_data_RUN/Admin/REU_adm0.shp")
+
+mapview(track_lines) + mapview(run)
+
+#### Extract points outside of the Reunion Island
+head(gps2)
+
+# Points inside the island only
+in_run <- st_intersection(gps2, run)
+mapview(in_run)
+
+# Points outside the island only
+out_run <- sf::st_difference(gps2, run)
+mapview(out_run,
+        zcol = 'Logger_ID')
+
+# track_lines_out <- out_run %>% group_by(Logger_ID) %>% summarize(do_union = FALSE) %>% st_cast("LINESTRING")
+# mapview(track_lines_out)
