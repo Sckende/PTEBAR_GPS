@@ -1,6 +1,12 @@
-# Use of TRIP package for the post-process of the gps data
-rm(list = ls())
-
+---
+title: "At-sea tracking - PETBAR"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+## Bilan data brutes
+```{r setup, include=FALSE}
 gps <- read.csv2("C:/Users/Etudiant/Desktop/SMAC/Projet_publi/4-PTEBAR_GPS/DATA/PTEBAR_GPS_all.csv", dec = ".")
 summary(gps)
 names(gps)
@@ -30,9 +36,22 @@ for (i in 1:length(gps_list)){
   bilan <- rbind(bilan, c(log_ID, point_numb, NA_numb, prop_NA))
   
 }
-names(bilan) <- c('log_ID', 'point_numb', 'NA_numb', 'prop_NA')
-bilan[order(as.numeric(bilan$point_numb)),]
+names(bilan) <- c('log_ID', 'point_numb', 'NA_numb', 'prop_NA (%)')
+```
 
+```{r, echo = F}
+library(knitr)
+kable(bilan[order(as.numeric(bilan$point_numb)),],
+      row.names = F,
+      caption = 'Details des données brutes')
+```
+
+## Bilan des données non dupliquées  
+  
+Les données ont été filtrées à partir de la variable **time** (composée de la date et de l'heure lors de l'enregistrement du point GPS). Dans le cas où deux dates identiques pour un même GPS sont présentes, la ligne conservée est celle qui présente le **searching_time** (time to fix) le plus court.
+
+
+```{r, include = F}
 # Delete the duplicated rows for DATE/TIME based on the lower searching_time
 bilan2 <- data.frame()
 
@@ -45,14 +64,26 @@ for(i in 1:length(gps_list)){
   point_numb <- nrow(t)
   time_min <- as.character(min(t$time))
   time_max <- as.character(max(t$time))
-  speed_min <- min(t$Speed)
-  speed_max <- max(t$Speed)
+  speed_min <- min(t$Speed)*1.852 # Avec conversion knot -> km.h
+  speed_max <- max(t$Speed)*1.852 # Avec conversion knot -> km.h
   
   bilan2 <- rbind(bilan2, c(log_ID, point_numb, time_min, time_max, speed_min, speed_max))
 }
-names(bilan2) <- c('log_ID', 'point_numb', 'time_min', 'time_max', 'speed_min', 'speed_max')
-bilan2[order(as.numeric(bilan2$point_numb)),]
+names(bilan2) <- c('log_ID', 'point_numb', 'time_min', 'time_max', 'speed_min (km/h)', 'speed_max (km/h)')
+```
 
+```{r, echo = F}
+library(knitr)
+
+kable(bilan2[order(as.numeric(bilan2$point_numb)),],
+      row.names = F)
+```
+  
+*Exclusion* des GPS *PAC04*, *PAC13* & *PAC05*.
+  
+## Visualisation des trajets
+
+```{r, include = F}
 #### DELETION of PAC04, PAC13 & PAC05 ####
 # Due to low number of GPS fixes
 k <- c('PAC04', 'PAC13', 'PAC05')
@@ -72,39 +103,62 @@ projcrs <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 gps2 <- sf::st_as_sf(gps2,
                      coords = c('Longitude', 'Latitude'),
                      crs = projcrs)
-head(gps2)
 
 # Creation of SF LINESTRINGS
 require(tidyverse)
 require(sf)
 track_lines <- gps2 %>% group_by(Logger_ID) %>% summarize(do_union = FALSE) %>% st_cast("LINESTRING")
+```
+```{r pressure, echo = FALSE}
+mapview::mapview(track_lines,
+                 zcol = 'Logger_ID',
+                 burst = T,
+                 homebutton = F)
+```
 
-mapview(track_lines)
-
-# Loading of Reunion Island spatial polygons
+## Points sur terre
+  
+```{r, include = F}
 run <- st_read("C:/Users/Etudiant/Desktop/SMAC/SPATIAL_data_RUN/Admin/REU_adm0.shp")
 
 mapview(track_lines) + mapview(run)
 
 #### Extract points outside of the Reunion Island
-head(gps2)
-
 # Points inside the island only
 in_run <- st_intersection(gps2, run)
-mapview(in_run)
+```
 
+```{r, echo = F}
+mapview(in_run,
+        zcol = 'Logger_ID',
+        burst = T,
+        homebutton = F)
+```
+
+## Points en mer
+
+```{r, include = F}
 # Points outside the island only
 out_run <- sf::st_difference(gps2, run)
+```
+
+```{r, echo = F}
+track_lines_out <- out_run %>% group_by(Logger_ID) %>% summarize(do_union = FALSE) %>% st_cast("LINESTRING")
+```
+
+```{r, echo = F}
 mapview(out_run,
-        zcol = 'Logger_ID')
+        zcol = 'Logger_ID',
+        burst = T,
+        homebutton = F) + mapview(track_lines_out,
+                 zcol = 'Logger_ID',
+                 burst = T,
+                 homebutton = F)
+``` 
 
-# track_lines_out <- out_run %>% group_by(Logger_ID) %>% summarize(do_union = FALSE) %>% st_cast("LINESTRING")
-# mapview(track_lines_out)
+## Fréquence d'enregistrement par GPS
 
-#### Number of fixes per day ####
-
-head(gps2)
-# computation
+```{r, include = F}
 test <- function(x){
   x$date <- as.Date(strftime(x$time, "%Y-%m-%d"))
   sequen <- data.frame(date = seq.Date(from = min(x$date), to = max(x$date), by = 1), n = 0)
@@ -126,4 +180,8 @@ barp_list <- function(x){
           las = 2,
           cex.names = 0.8)
 }
+```
+
+```{r, echo = F}
 bars <- lapply(list_fix_freq, barp_list)
+```
