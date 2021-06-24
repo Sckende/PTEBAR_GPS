@@ -1,5 +1,6 @@
 # Use of TRIP package for the post-process of the gps data
 rm(list = ls())
+source('C:/Users/Etudiant/Desktop/SMAC/GITHUB/PTEBAR_GPS/PETBAR_Script_Functions.R')
 
 gps <- read.csv2("C:/Users/Etudiant/Desktop/SMAC/Projet_publi/4-PTEBAR_GPS/DATA/PTEBAR_GPS_all.csv", dec = ".")
 summary(gps)
@@ -59,6 +60,9 @@ k <- c('PAC04', 'PAC13', 'PAC05')
 no <- setdiff(names(gps_list), k)
 gps_list2 <- gps_list[no] # keeping list levels with data of interest
 
+#### CORRECTION OF FIRST DATE - PAC12
+gps_list2$PAC12$time[1] <- as.POSIXct('2018-12-18 11:33:00')
+
 #### Visual explo ####
 #require(trip)
 require(mapview)
@@ -86,7 +90,7 @@ run <- st_read("C:/Users/Etudiant/Desktop/SMAC/SPATIAL_data_RUN/Admin/REU_adm0.s
 
 mapview(track_lines) + mapview(run)
 
-#### Extract points outside of the Reunion Island
+#### Extract points outside of the Reunion Island ####
 head(gps2)
 
 # Points inside the island only
@@ -105,25 +109,12 @@ mapview(out_run,
 
 head(gps2)
 # computation
-test <- function(x){
-  x$date <- as.Date(strftime(x$time, "%Y-%m-%d"))
-  sequen <- data.frame(date = seq.Date(from = min(x$date), to = max(x$date), by = 1), n = 0)
-  
-  mm <- dplyr::count(x, date)
-  mm <- rbind(mm, sequen[!(sequen$date %in% mm$date),])
-  mm <- mm[order(mm$date, decreasing = F),]
-  mm <- cbind(Logger_ID = unique(x$Logger_ID), mm)
-  print(mm)
-}
-
 list_fix_freq <- lapply(gps_list2, test)
 
 # Visualization
-barp_list <- function(x){
-  barplot(x$n,
-          names.arg = x$date,
-          main = unique(x$Logger_ID),
-          las = 2,
-          cex.names = 0.8)
-}
 bars <- lapply(list_fix_freq, barp_list)
+
+#### Filtering based on the part of monitored breeding colony ####
+
+mon_col <- st_read("C:/Users/Etudiant/Desktop/SMAC/SPATIAL_data_RUN/Lieu_dit_terrain/lieu_dit_terrain.shp")
+protec_col <- st_read("C:/Users/Etudiant/Desktop/SMAC/SPATIAL_data_RUN/APB_PTEBAR/APB_PTEBAR.shp")

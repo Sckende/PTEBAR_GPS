@@ -1,13 +1,64 @@
 ---
-title: "At-sea tracking - PETBAR"
+title: "PTEBAR - At-sea tracking"
+subtitle: "Data exploration - part 1"
 output:
   html_document:
     toc: true
-    toc_depth: 2
+    number_sections: true
+    toc_float: true
 ---
-## Bilan data brutes
+
+```{r, include = F}
+if (knitr::is_html_output()) knitr::knit_hooks$set(
+  plot = function(x, options) {
+    cap  <- options$fig.cap  # figure caption
+    tags <- htmltools::tags
+    as.character(tags$figure(
+      tags$img(src = x, alt = cap),
+      tags$figcaption(cap)
+    ))
+  }
+)
+
+# packages
+require(knitr)
+require(mapview)
+require(tidyverse)
+require(sf)
+```
+
+# Mise en contexte  
+  
+
+Dans le cadre du projet Life + Pétrels, 10 balises GPS ont été déployées sur des pétrels de Barau entre le 18-12-2018 et le 19-12-2018. Les balises sont des GPS écotone type PICA de 5g. Les individus équipés sont tous nicheurs et localisés dans la vallée des Deux Miches (**Tab. 1**). Un des but du déployement de cette technologie était de décrire finement les zones de passage ainsi que l'altitude de vol des pétrels lors des entrées et des sorties de la colonie de reproduction.  
+
+La configuration des GPS est la suivante:  
+ - SOIR : activation de 16:30 à 22h30 (heure locale)  
+ - MATIN : activation de 2:30 à 6h30 (heure locale)  
+ - Fréquence d'acquisitaion : 1 point/min  
+ - Base range : en marche (indication sur la présence ou non de l'individu au terrier)  
+ - No GPS signal : le GPS s'éteint  
+ 
+```{r tableau_1, echo = F}
+tab1 <- data.frame(nest_ID = c(108,104,31,30,20,103,100,11,13,12),
+                   Logger_ID = c('PAC11', 'PAC20', 'PAC16', 'PAC15', 'PAC4', 'PAC3', 'PAC14', 'PAC10', 'PAC6', 'PAC12'),
+                   ring_ID = c('FX25185', 'FS88360', 'GE41788', 'FS88338', 'FS88926', 'FX24884', 'FX24893', 'FS75797', 'FS88846', 'GE41695'),
+                   
+                   breed_stat = c(rep('AD/O', 3), 'AD/P', '2AD/echec_incert', 'AD/P', rep('AD/O', 4)),
+                   weight = c(390,420,470,390,410,410,420,430,400,430),
+                   GPS_config = c(rep('SOIR', 5), rep('MATIN', 5)))
+kable(tab1, caption = 'Tab. 1. Bilan des individus équipés avec un GPS')
+```
+ *ajouter point GPS des nids*  
+ *demander à Djé la dernière date de contrôle de ces individus*
+   
+   
+# Bilan data brutes
 ```{r setup, include=FALSE}
+source('C:/Users/Etudiant/Desktop/SMAC/GITHUB/PTEBAR_GPS/PETBAR_Script_Functions.R')
+
 gps <- read.csv2("C:/Users/Etudiant/Desktop/SMAC/Projet_publi/4-PTEBAR_GPS/DATA/PTEBAR_GPS_all.csv", dec = ".")
+
 summary(gps)
 names(gps)
 
@@ -33,10 +84,13 @@ for (i in 1:length(gps_list)){
   NA_numb <- length(gps_list[[i]]$Latitude[is.na(gps_list[[i]]$Latitude)])
   prop_NA <- round(NA_numb/point_numb*100, digits = 1)
   
-  bilan <- rbind(bilan, c(log_ID, point_numb, NA_numb, prop_NA))
+  time_min <- as.character(min(gps_list[[i]]$time))
+  time_max <- as.character(max(gps_list[[i]]$time))
   
+  bilan <- rbind(bilan, c(log_ID, point_numb, NA_numb, prop_NA, time_min, time_max))
+
 }
-names(bilan) <- c('log_ID', 'point_numb', 'NA_numb', 'prop_NA (%)')
+names(bilan) <- c('log_ID', 'point_numb', 'NA_numb', 'prop_NA (%)', 'time_min', 'time_max')
 ```
 
 ```{r, echo = F}
@@ -46,9 +100,9 @@ kable(bilan[order(as.numeric(bilan$point_numb)),],
       caption = 'Details des données brutes')
 ```
 
-## Bilan des données non dupliquées  
+# Bilan des données non dupliquées  
   
-Les données ont été filtrées à partir de la variable **time** (composée de la date et de l'heure lors de l'enregistrement du point GPS). Dans le cas où deux dates identiques pour un même GPS sont présentes, la ligne conservée est celle qui présente le **searching_time** (time to fix) le plus court.
+Les données ont été filtrées à partir de la variable **time** (composée de la date et de l'heure lors de l'enregistrement du point GPS). Dans le cas où deux dates identiques pour un même GPS sont présentes, la ligne conservée est celle qui présente le **searching_time** (time to fix) le plus court. Les *NA* ont également été retirés.
 
 
 ```{r, include = F}
@@ -81,7 +135,7 @@ kable(bilan2[order(as.numeric(bilan2$point_numb)),],
   
 *Exclusion* des GPS *PAC04*, *PAC13* & *PAC05*.
   
-## Visualisation des trajets
+# Visualisation des trajets
 
 ```{r, include = F}
 #### DELETION of PAC04, PAC13 & PAC05 ####
@@ -89,10 +143,10 @@ kable(bilan2[order(as.numeric(bilan2$point_numb)),],
 k <- c('PAC04', 'PAC13', 'PAC05')
 no <- setdiff(names(gps_list), k)
 gps_list2 <- gps_list[no] # keeping list levels with data of interest
+#### CORRECTION OF FIRST DATE - PAC12
+gps_list2$PAC12$time[1] <- as.POSIXct('2018-12-18 11:33:00')
 
 #### Visual explo ####
-#require(trip)
-require(mapview)
 
 # data conversion in SF LINESTRING
 
@@ -105,8 +159,7 @@ gps2 <- sf::st_as_sf(gps2,
                      crs = projcrs)
 
 # Creation of SF LINESTRINGS
-require(tidyverse)
-require(sf)
+
 track_lines <- gps2 %>% group_by(Logger_ID) %>% summarize(do_union = FALSE) %>% st_cast("LINESTRING")
 ```
 ```{r pressure, echo = FALSE}
@@ -116,7 +169,7 @@ mapview::mapview(track_lines,
                  homebutton = F)
 ```
 
-## Points sur terre
+# Points sur terre
   
 ```{r, include = F}
 run <- st_read("C:/Users/Etudiant/Desktop/SMAC/SPATIAL_data_RUN/Admin/REU_adm0.shp")
@@ -135,7 +188,7 @@ mapview(in_run,
         homebutton = F)
 ```
 
-## Points en mer
+# Points en mer
 
 ```{r, include = F}
 # Points outside the island only
@@ -156,30 +209,10 @@ mapview(out_run,
                  homebutton = F)
 ``` 
 
-## Fréquence d'enregistrement par GPS
+# Fréquence d'enregistrement par GPS
 
 ```{r, include = F}
-test <- function(x){
-  x$date <- as.Date(strftime(x$time, "%Y-%m-%d"))
-  sequen <- data.frame(date = seq.Date(from = min(x$date), to = max(x$date), by = 1), n = 0)
-  
-  mm <- dplyr::count(x, date)
-  mm <- rbind(mm, sequen[!(sequen$date %in% mm$date),])
-  mm <- mm[order(mm$date, decreasing = F),]
-  mm <- cbind(Logger_ID = unique(x$Logger_ID), mm)
-  print(mm)
-}
-
 list_fix_freq <- lapply(gps_list2, test)
-
-# Visualization
-barp_list <- function(x){
-  barplot(x$n,
-          names.arg = x$date,
-          main = unique(x$Logger_ID),
-          las = 2,
-          cex.names = 0.8)
-}
 ```
 
 ```{r, echo = F}
