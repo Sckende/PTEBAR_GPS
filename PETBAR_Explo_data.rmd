@@ -27,7 +27,9 @@ require(tidyverse)
 require(sf)
 ```
 
-# Mise en contexte  
+# Mise en contexte
+  
+## Mission 1 - Grand-Bénarre - 18 au 19 décembre 2018
   
 
 Dans le cadre du projet Life + Pétrels, 10 balises GPS ont été déployées sur des pétrels de Barau entre le 18-12-2018 et le 19-12-2018. Les balises sont des GPS écotone type PICA de 5g. Les individus équipés sont tous nicheurs et localisés dans la vallée des Deux Miches (**Tab. 1**). Un des but du déployement de cette technologie était de décrire finement les zones de passage ainsi que l'altitude de vol des pétrels lors des entrées et des sorties de la colonie de reproduction.  
@@ -40,19 +42,44 @@ La configuration des GPS est la suivante:
  - No GPS signal : le GPS s'éteint  
  
 ```{r tableau_1, echo = F}
-tab1 <- data.frame(nest_ID = c(108,104,31,30,20,103,100,11,13,12),
-                   Logger_ID = c('PAC11', 'PAC20', 'PAC16', 'PAC15', 'PAC4', 'PAC3', 'PAC14', 'PAC10', 'PAC6', 'PAC12'),
-                   ring_ID = c('FX25185', 'FS88360', 'GE41788', 'FS88338', 'FS88926', 'FX24884', 'FX24893', 'FS75797', 'FS88846', 'GE41695'),
+tab1 <- data.frame(nest_ID = c(108,104,31,30,20,103,100,11,13,12, NA, NA),
+                   nest_lat = NA,
+                   nest_long = NA,
+                   Logger_ID = c('PAC11', 'PAC20', 'PAC16', 'PAC15', 'PAC04', 'PAC03', 'PAC14', 'PAC10', 'PAC06', 'PAC12', 'PAC05', 'PAC13'),
+                   ring_ID = c('FX25185', 'FS88360', 'GE41788', 'FS88338', 'FS88926', 'FX24884', 'FX24893', 'FS75797', 'FS88846', 'GE41695', NA, NA),
                    
-                   breed_stat = c(rep('AD/O', 3), 'AD/P', '2AD/echec_incert', 'AD/P', rep('AD/O', 4)),
-                   weight = c(390,420,470,390,410,410,420,430,400,430),
-                   GPS_config = c(rep('SOIR', 5), rep('MATIN', 5)))
-kable(tab1, caption = 'Tab. 1. Bilan des individus équipés avec un GPS')
+                   breed_stat = c(rep('AD/O', 3), 'AD/P', '2AD/echec', 'AD/P', rep('AD/O', 4), NA, NA),
+                   ring_year = c(2017, 2012, 2015, 2012, 2013, 2018, 2018, 2009, 2014, 2014, NA, NA),
+                   weight = c(390,420,470,390,410,410,420,430,400,430, NA, NA),
+                   GPS_config = c(rep('SOIR', 5), rep('MATIN', 5), NA, NA))
+
+knitr::kable(tab1[order(tab1$nest_ID),], caption = 'Tab. 1. Bilan des individus équipés avec un GPS')
 ```
  *ajouter point GPS des nids*  
  *demander à Djé la dernière date de contrôle de ces individus*
+ * ATTENTION - les balises **PAC05** & **PAC13** ne sont pas répertoriées dans les comptes rendus (CR) de missions *tracking*. Cependant, deux balises (**PAC20** & **PAC14**) sont mentionnées dans le CR mais n'apparaissent pas dans le jeux de données.
    
-   
+## Mission 2 - Grand-Bénarre - 9 au 10 janvier 2019
+  
+Au cours de cette mission, aucun GPS n'a été récupéré et aucune donnée n'a été réceptionnée par l'antenne. De plus, certains individus semblent avoir changé de partenaire (**Tab. 2**).
+  
+```{r, echo = F}
+tab2 <- data.frame(nest_ID = c(103, 13, 12, 11, 100, 20, 30, 31, 104, 108, NA, NA),
+                   nest_lat = NA,
+                   nest_long = NA,
+                   Logger_ID = c('PAC03', 'PAC06', 'PAC12', 'PAC10', 'PAC14', 'PAC04', 'PAC15', 'PAC16', 'PAC20', 'PAC11', 'PAC05', 'PAC13'),
+                   nest_status = c('vide', 'vide', 'pul seul', 'vide', 'non trouvé', 'pul seul', 'vide', 'vide', 'vide', 'AD non bagué', NA, NA),
+                   ring_ind1 = c('pas d ind', ' ', 'FS78167', ' ', 'FL38093', ' ', ' ', ' ', 'FX24885', ' ', NA, NA),
+                   ring_ind2= c('pas d ind', ' ', 'FS88849', ' ', ' ', ' ', ' ', ' ', 'FX24691', ' ', NA, NA),
+                   rmq = c('vide le 01/2019', 'vide le 11/2019', 'ind2=nouveau partenaire?', 'vide le 11/2019', 'AD/O le11/2019', 'TPROF 11/2019', 'AD INAX puis TPROF le 11/2019', 'AD INAX puis TPROF le 11/2019', 'ind2=nouveau partenaire?', 'vide le 11/2019', NA, NA))
+
+knitr::kable(tab2[order(tab2$nest_ID),], caption = 'Tab. 2. Bilan du suivi des nids occupés par les adultes avec GPS à lors de la mission précédente')
+```
+  
+## Mission 3 - Grand-Bénarre - 11 au 12 février 2019
+  
+Aucun oiseau avec GPS n'a été contrôlé sur la colonie. La communication entre les GPS et l'antenne deployée sur colonie (GPS point ?) semble avoir été faible, avec peu de données transmises : 4 GPS sur 10 et disparition du GPS **PAC20**.  
+
 # Bilan data brutes
 ```{r setup, include=FALSE}
 source('C:/Users/Etudiant/Desktop/SMAC/GITHUB/PTEBAR_GPS/PETBAR_Script_Functions.R')
