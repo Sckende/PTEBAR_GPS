@@ -14,6 +14,14 @@ names(gps)
 #### here keeping only date, ID, lat & long, speed, searching_time, Voltage ####
 gps1 <- gps[, c(2, 9:13, 29)]
 
+#### Addition of a 'period' variable
+
+gps1$period[month(gps1$time) %in% 1:4] <- 'rearing'
+gps1$period[month(gps1$time) %in% 5:8] <- 'winter'
+gps1$period[month(gps1$time) %in% 9:10] <- 'prosp'
+gps1$period[month(gps1$time) %in% 11:12] <- 'incub'
+
+table(gps1$period, useNA = 'always')
 #### For each logger, % of missing data, max/min speed, ... ####
 #all(is.na(gps$Latitude) == is.na(gps$Longitude)) # check point
 
@@ -60,8 +68,9 @@ k <- c('PAC04', 'PAC13', 'PAC05')
 no <- setdiff(names(gps_list), k)
 gps_list2 <- gps_list[no] # keeping list levels with data of interest
 
-#### CORRECTION OF FIRST DATE - PAC12
+#### CORRECTION OF FIRST DATE and PERIOD - PAC12
 gps_list2$PAC12$time[1] <- as.POSIXct('2018-12-18 11:33:00')
+gps_list2$PAC12$period[1] <- 'incub'
 
 #### Visual explo ####
 #require(trip)
@@ -113,6 +122,22 @@ list_fix_freq <- lapply(gps_list2, test)
 
 # Visualization
 bars <- lapply(list_fix_freq, barp_list)
+
+# Summary of fixes frequencies for all the period
+
+su <- do.call('rbind', list_fix_freq)
+su_list <- tapply(su$n, su$Logger_ID, summary)
+su_df <- do.call('rbind', su_list); su_df
+
+# Summary of fixes frequencies for the rearing period only
+rear_dates <- seq.Date(as.Date(strftime('2019-01-01', "%Y-%m-%d")),
+                      as.Date(strftime('2019-04-30', "%Y-%m-%d")),
+                      by = 1)
+
+su_rear <- su[su$date %in% rear_dates,]
+su_rear_list <- tapply(su_rear$n, su_rear$Logger_ID, summary)
+su_rear_df <- do.call('rbind', su_rear_list); su_rear_df
+
 
 #### Filtering based on the part of monitored breeding colony ####
 
