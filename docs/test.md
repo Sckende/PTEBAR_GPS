@@ -253,3 +253,10 @@ list_fix_freq_rear <- lapply(gps_list2, test_V2,
 bars <- lapply(list_fix_freq, barp_list)
 #bars_rear <- lapply(list_fix_freq_rear, barp_list)
 ```
+```{r}
+library(plotly)
+p <- ggplot(data = diamonds,
+aes =(x = cut, fill = clarity)) +
+geom_bar(position = "dodge")
+ggplot(p)
+```
